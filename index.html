@@ -841,16 +841,25 @@
         function resizeCanvas() {
             canvas.width = window.innerWidth * window.devicePixelRatio;
             canvas.height = window.innerHeight * window.devicePixelRatio;
+            
+            // Redraw immediately so it doesn't flicker blank on mobile URL bar scroll
+            if (lastFrameIndex >= 0 && images[lastFrameIndex]) {
+                drawCover(images[lastFrameIndex]);
+            }
         }
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
-        // Draw image on canvas with "cover" behavior (fills full screen)
+        // Draw image on canvas (cover on desktop, contain on mobile)
         function drawCover(img) {
             if (!img || !img.complete || !img.naturalWidth) return;
             const cw = canvas.width, ch = canvas.height;
             const iw = img.naturalWidth, ih = img.naturalHeight;
-            const scale = Math.max(cw / iw, ch / ih);
+            
+            // On mobile, use 'contain' so the shoe isn't cropped. On desktop, use 'cover'.
+            const isMobile = window.innerWidth <= 768;
+            const scale = isMobile ? Math.min(cw / iw, ch / ih) : Math.max(cw / iw, ch / ih);
+            
             const sw = iw * scale, sh = ih * scale;
             const dx = (cw - sw) / 2, dy = (ch - sh) / 2;
             ctx.clearRect(0, 0, cw, ch);
