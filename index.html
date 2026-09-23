@@ -143,14 +143,11 @@
         }
         .hero-shoe-container {
             position: absolute; inset: 0; z-index: 5;
-            display: flex; align-items: flex-start; justify-content: center;
             overflow: hidden;
-            transform-style: preserve-3d; transition: transform 0.1s linear;
         }
-        .hero-shoe-container img {
-            width: 100%; height: 100%; object-fit: contain;
-            object-position: center center;
-            image-rendering: -webkit-optimize-contrast;
+        .hero-shoe-container canvas {
+            width: 100%; height: 100%;
+            display: block;
         }
         .hero-side-text {
             position: absolute; left: 40px; top: 50%; transform: translateY(-50%) rotate(-90deg);
@@ -512,13 +509,14 @@
             .footer { padding: 50px 20px 24px; }
             .hero-side-text, .hero-socials, .hero-right-indicator, .hero-buy-btn { display: none; }
             .hero-shoe-container { position: absolute; inset: 0; width: 100%; }
-            .hero-shoe-container img { object-fit: contain; object-position: center center; }
         }
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: var(--darker); }
         ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--orange), var(--golden)); border-radius: 3px; }
     </style>
+    <!-- Motion (standalone Framer Motion) for smooth animations -->
+    <script src="https://cdn.jsdelivr.net/npm/motion@11/dist/motion.js"></script>
 </head>
 <body>
 
@@ -560,8 +558,8 @@
         <div class="hero-side-text">2026 Collection</div>
 
         <div class="hero-shoe-container" id="heroShoe">
-            <!-- 🎬 ANIMATION -->
-            <img id="heroExplodeImg" src="exploded/ezgif-frame-001.jpg" alt="Hero Shoe">
+            <!-- 🎬 CANVAS ANIMATION -->
+            <canvas id="heroCanvas"></canvas>
             <!-- END ANIMATION -->
         </div>
 
@@ -831,20 +829,49 @@
             '8': { name: 'Adidas Z30', price: 189, img: 'img/p1.jpg' },
         };
 
-        // Preload Exploded Frames
+        // ===== CANVAS-BASED HERO ANIMATION =====
         const frameCount = 151;
         const images = [];
+        let loadedCount = 0;
+        const canvas = document.getElementById('heroCanvas');
+        const ctx = canvas.getContext('2d');
+        const heroWrapper = document.getElementById('heroWrapper');
+
+        // Set canvas to screen resolution for sharp rendering
+        function resizeCanvas() {
+            canvas.width = window.innerWidth * window.devicePixelRatio;
+            canvas.height = window.innerHeight * window.devicePixelRatio;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Draw image on canvas with "cover" behavior (fills full screen)
+        function drawCover(img) {
+            if (!img || !img.complete || !img.naturalWidth) return;
+            const cw = canvas.width, ch = canvas.height;
+            const iw = img.naturalWidth, ih = img.naturalHeight;
+            const scale = Math.max(cw / iw, ch / ih);
+            const sw = iw * scale, sh = ih * scale;
+            const dx = (cw - sw) / 2, dy = (ch - sh) / 2;
+            ctx.clearRect(0, 0, cw, ch);
+            ctx.drawImage(img, dx, dy, sw, sh);
+        }
+
+        // Preload all frames
         for (let i = 1; i <= frameCount; i++) {
             const img = new Image();
             img.src = `exploded/ezgif-frame-${i.toString().padStart(3, '0')}.jpg`;
+            img.onload = () => {
+                loadedCount++;
+                if (i === 1) drawCover(img); // Draw first frame immediately
+            };
             images.push(img);
         }
-        const heroExplodeImg = document.getElementById('heroExplodeImg');
-        const heroWrapper = document.getElementById('heroWrapper');
 
         // Smooth scroll animation
         let targetFraction = 0;
         let currentFraction = 0;
+        let lastFrameIndex = -1;
 
         window.addEventListener('scroll', () => {
             const sy = window.scrollY;
@@ -853,7 +880,7 @@
             document.getElementById('navbar').classList.toggle('scrolled', sy > 60);
 
             // Hero Animation Scrubbing
-            if (heroWrapper && heroExplodeImg) {
+            if (heroWrapper) {
                 const scrollRange = heroWrapper.scrollHeight - window.innerHeight;
                 let fraction = window.scrollY / scrollRange;
                 if (fraction < 0) fraction = 0;
@@ -881,15 +908,15 @@
             cy += (my - cy) * 0.06;
             wmTop.style.transform = `translateX(-50%) translate(${cx * 20}px, ${cy * 10}px)`;
             wmBottom.style.transform = `translate(${cx * -15}px, ${cy * -8}px)`;
-            heroShoe.style.transform = `translate(${cx * 12}px, ${cy * -8}px)`;
-            
-            // Smooth frame interpolation
-            if (heroExplodeImg) {
-                currentFraction += (targetFraction - currentFraction) * 0.08;
-                const frameIndex = Math.floor(currentFraction * (frameCount - 1));
-                if (images[frameIndex] && heroExplodeImg.src !== images[frameIndex].src) {
-                    heroExplodeImg.src = images[frameIndex].src;
-                }
+
+            // Smooth spring-like interpolation for buttery frames
+            const diff = targetFraction - currentFraction;
+            currentFraction += diff * 0.1 + diff * Math.abs(diff) * 0.05;
+
+            const frameIndex = Math.min(Math.floor(currentFraction * (frameCount - 1)), frameCount - 1);
+            if (frameIndex !== lastFrameIndex && images[frameIndex] && images[frameIndex].complete) {
+                drawCover(images[frameIndex]);
+                lastFrameIndex = frameIndex;
             }
 
             requestAnimationFrame(animHero);
