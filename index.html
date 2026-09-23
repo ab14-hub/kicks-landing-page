@@ -833,6 +833,7 @@
         const frameCount = 151;
         const images = [];
         let loadedCount = 0;
+        let lastFrameIndex = -1;
         const canvas = document.getElementById('heroCanvas');
         const ctx = canvas.getContext('2d');
         const heroWrapper = document.getElementById('heroWrapper');
@@ -880,7 +881,6 @@
         // Smooth scroll animation
         let targetFraction = 0;
         let currentFraction = 0;
-        let lastFrameIndex = -1;
 
         window.addEventListener('scroll', () => {
             const sy = window.scrollY;
