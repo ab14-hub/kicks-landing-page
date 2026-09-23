@@ -870,7 +870,7 @@
         // Preload all frames
         for (let i = 1; i <= frameCount; i++) {
             const img = new Image();
-            img.src = `exploded new/ezgif-frame-${i.toString().padStart(3, '0')}.jpg`;
+            img.src = `exploded-new/ezgif-frame-${i.toString().padStart(3, '0')}.jpg`;
             img.onload = () => {
                 loadedCount++;
                 if (i === 1) drawCover(img); // Draw first frame immediately
