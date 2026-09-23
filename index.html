@@ -148,9 +148,6 @@
         .hero-shoe-container canvas {
             width: 100%; height: 100%;
             display: block;
-            mix-blend-mode: lighten;
-            -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 85%);
-            mask-image: radial-gradient(circle at center, black 40%, transparent 85%);
         }
         .hero-side-text {
             position: absolute; left: 40px; top: 50%; transform: translateY(-50%) rotate(-90deg);
@@ -860,13 +857,23 @@
             const cw = canvas.width, ch = canvas.height;
             const iw = img.naturalWidth, ih = img.naturalHeight;
             
-            // On mobile, use 'contain' so the shoe isn't cropped. On desktop, use 'cover'.
             const isMobile = window.innerWidth <= 768;
             const scale = isMobile ? Math.min(cw / iw, ch / ih) : Math.max(cw / iw, ch / ih);
             
             const sw = iw * scale, sh = ih * scale;
             const dx = (cw - sw) / 2, dy = (ch - sh) / 2;
+            
+            // Draw image temporarily to sample its background color
             ctx.clearRect(0, 0, cw, ch);
+            ctx.drawImage(img, 0, 0, iw, ih);
+            const pixel = ctx.getImageData(0, 0, 1, 1).data;
+            const bgColor = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
+            
+            // Fill entire canvas with the frame's background color
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, cw, ch);
+            
+            // Now draw the image at the correct scale and position
             ctx.drawImage(img, dx, dy, sw, sh);
         }
 
